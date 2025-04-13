@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Solar System Star Map with Orbits and Asteroid Belt</title>
+    <style>
+        /* Basic styles */
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: white;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2>3D Solar System Star Map</h2>
+        <p>Planets and an asteroid belt around the Sun. Click to explore!</p>
+    </div>
+    <canvas id="solarSystem"></canvas>
+
+    <!-- Include Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Initialize scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('solarSystem'), antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Set camera position
+        camera.position.z = 30;
+
+        // Create the Sun
+        const sunGeometry = new THREE.SphereGeometry(3, 32, 32);
+        const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+        const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+        scene.add(sun);
+
+        // Planet details with orbit distances
+        const planets = [
+            { name: 'Mercury', color: 0xaaaaaa, distance: 5, size: 0.4 },
+            { name: 'Venus', color: 0xffd700, distance: 8, size: 0.95 },
+            { name: 'Earth', color: 0x0000ff, distance: 11, size: 1 },
+            { name: 'Mars', color: 0xff4500, distance: 14, size: 0.53 },
+        ];
+
+        // Create asteroid belt
+        const asteroidBelt = [];
+        const asteroidCount = 100;
+        for (let i = 0; i < asteroidCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 18 + Math.random() * 2;
+            const size = 0.1 + Math.random() * 0.1;
+
+            const geometry = new THREE.SphereGeometry(size, 16, 16);
+            const material = new THREE.MeshBasicMaterial({ color: 0x888888 });
+            const asteroid = new THREE.Mesh(geometry, material);
+
+            asteroid.position.x = Math.cos(angle) * distance;
+            asteroid.position.z = Math.sin(angle) * distance;
+            asteroid.userData = { angle, distance, speed: 0.001 + Math.random() * 0.001 };
+            asteroidBelt.push(asteroid);
+            scene.add(asteroid);
+        }
+
+        // Helper function to create planets with orbit paths
+        function createPlanet({ name, color, distance, size }) {
+            const geometry = new THREE.SphereGeometry(size, 32, 32);
+            const material = new THREE.MeshBasicMaterial({ color });
+            const planet = new THREE.Mesh(geometry, material);
+            planet.position.x = distance;
+            planet.name = name;
+
+            // Create orbit path
+            const orbitGeometry = new THREE.RingGeometry(distance - 0.02, distance + 0.02, 64);
+            const orbitMaterial = new THREE.MeshBasicMaterial({ color: 0x888888, side: THREE.DoubleSide });
+            const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+            orbit.rotation.x = Math.PI / 2;
+            scene.add(orbit);
+
+            return planet;
+        }
+
+        // Add planets to the scene
+        planets.forEach(planetInfo => {
+            const planet = createPlanet(planetInfo);
+            scene.add(planet);
+
+            // Animate each planet
+            planet.userData = {
+                distance: planetInfo.distance,
+                speed: 0.01 + Math.random() * 0.005,
+                angle: Math.random() * Math.PI * 2,
+            };
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotate the Sun
+            sun.rotation.y += 0.002;
+
+            // Orbit planets around the sun
+            scene.children.forEach((planet) => {
+                if (planet.userData && planet.userData.distance) {
+                    planet.userData.angle += planet.userData.speed;
+                    planet.position.x = Math.cos(planet.userData.angle) * planet.userData.distance;
+                    planet.position.z = Math.sin(planet.userData.angle) * planet.userData.distance;
+                }
+            });
+
+            // Rotate each asteroid in the belt around the sun
+            asteroidBelt.forEach((asteroid) => {
+                asteroid.userData.angle += asteroid.userData.speed;
+                asteroid.position.x = Math.cos(asteroid.userData.angle) * asteroid.userData.distance;
+                asteroid.position.z = Math.sin(asteroid.userData.angle) * asteroid.userData.distance;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        // Make responsive
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+
+        // Call the animation function
+        animate();
+    </script>
+</body>
+</html>
